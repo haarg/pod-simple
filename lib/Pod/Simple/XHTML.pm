@@ -94,10 +94,12 @@ sub decode_entities {
   return $string;
 }
 
+# this is only for encoding paths and fragments, not query components. query
+# components have a more restricted character set
 sub encode_url {
   my ($self, $string) = @_;
 
-  $string =~ s{([^-_.!~*()abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZZ0123456789])}{
+  $string =~ s{([^-._~!\$&'()*+,;=:\@abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZZ0123456789])}{
     sprintf('%%%02X', ord($1))
   }eg;
 
@@ -788,7 +790,7 @@ sub resolve_man_page_link {
     my ($page, $part) = $to =~ /^([^(]+)(?:[(](\d+)[)])?$/;
     return undef unless $page;
     return ($self->man_url_prefix || '')
-        . ($part || 1) . "/" . $self->encode_entities($page)
+        . ($part || 1) . "/" . $self->encode_url($page)
         . ($self->man_url_postfix || '');
 
 }

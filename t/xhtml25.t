@@ -55,7 +55,7 @@ my $parser = MyXHTML->new;
 for my $names (@tests) {
     my ($heading, $id, $link) = @$names;
 
-    is $link, $parser->encode_url($id),
+    is $parser->encode_url($id), $link,
         'assert correct encoding of url fragment';
 
     my $html_id = $parser->encode_entities($id);
