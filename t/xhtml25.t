@@ -39,6 +39,7 @@ BEGIN {
     }
 }
 
+local $Pod::Simple::XHTML::HAS_HTML_ENTITIES = 0;
 
 my @tests = (
     # Pod                   id                        link (url encoded)
@@ -55,35 +56,44 @@ my $parser = MyXHTML->new;
 for my $names (@tests) {
     my ($heading, $id, $link) = @$names;
 
-    is $link, $parser->encode_url($id),
-        'assert correct encoding of url fragment';
+    my $heading_name = "for '$heading'";
+
+    is $parser->encode_url($id), $link,
+        "assert correct encoding of url fragment $heading_name";
 
     my $html_id = $parser->encode_entities($id);
 
     {
-        my $result = MyXHTML->new->parse_to_string(<<"EOT");
-=head1 $heading
+        my $pod = <<"EOT";
+    =head1 $heading
 
-L<< /$heading >>
+    L<< /$heading >>
 
 EOT
+        $pod =~ s/^    //gm;
+
+        my $result = MyXHTML->new->parse_to_string("$pod");
+
         like $result, qr{<h1 id="\Q$html_id\E">},
-            "heading id generated correctly for '$heading'";
+            "heading id generated correctly $heading_name";
         like $result, qr{<li><a href="\#\Q$link\E">},
-            "index link generated correctly for '$heading'";
+            "index link generated correctly $heading_name";
         like $result, qr{<p><a href="\#\Q$link\E">},
-            "L<> link generated correctly for '$heading'";
+            "L<> link generated correctly $heading_name";
     }
     {
-        my $result = MyXHTML->new->parse_to_string(<<"EOT");
-=over 4
+        my $pod = <<"EOT";
+    =over 4
 
-=item $heading
+    =item $heading
 
-=back
+    =back
 
 EOT
+        $pod =~ s/^    //gm;
+
+        my $result = MyXHTML->new->parse_to_string("$pod");
         like $result, qr{<dt id="\Q$html_id\E">},
-            "item id generated correctly for '$heading'";
+            "item id generated correctly for $heading_name";
     }
 }
