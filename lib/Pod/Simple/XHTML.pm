@@ -95,12 +95,17 @@ sub decode_entities {
   return $string;
 }
 
+sub HAVE_UTF8_ENCODE ();
+BEGIN {
+  *HAVE_UTF8_ENCODE = defined &utf8::encode ? sub () { 1 } : sub () { 0 };
+}
+my %percent_enc = map +( chr($_) => sprintf('%%%02X', $_) ), 0 .. 255;
+
 sub encode_url {
   my ($self, $string) = @_;
 
-  $string =~ s{([^-_.!~*()abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZZ0123456789])}{
-    sprintf('%%%02X', ord($1))
-  }eg;
+  utf8::encode($string) if HAVE_UTF8_ENCODE;
+  $string =~ s{([^-_.!~*()a-zA-Z0-9])}{$percent_enc{$1}}g;
 
   return $string;
 }

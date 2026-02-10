@@ -47,6 +47,9 @@ my @tests = (
     [ '$@',                 '$@',                     '%24%40'                    ],
     [ 'With C<Formatting>', 'With-Formatting',        'With-Formatting'           ],
     [ '$obj->method($foo)', '$obj->method($foo)',     '%24obj-%3Emethod(%24foo)'  ],
+    [ 'bjørn',              'bjørn',                  'bj%C3%B8rn',  'ISO-8859-1' ],
+    [ 'bjørn',              'bjørn',                  'bj%C3%B8rn',       'UTF-8' ],
+    [ '🌐',                 '🌐',                     '%F0%9F%8C%90',     'UTF-8' ],
 );
 
 plan tests => 5 * scalar @tests;
@@ -54,9 +57,30 @@ plan tests => 5 * scalar @tests;
 my $parser = MyXHTML->new;
 
 for my $names (@tests) {
-    my ($heading, $id, $link) = @$names;
+    my ($heading, $id, $link, $encoding) = @$names;
 
-    my $heading_name = "for '$heading'";
+    my $heading_name = "for '$heading'" . ($encoding ? " ($encoding)" : '');
+
+    my $encoding_dir = '';
+    if ($encoding) {
+        if (!Pod::Simple::XHTML::HAVE_UTF8_ENCODE) {
+            skip 'no encoding support', 5;
+        }
+        elsif ($encoding eq 'ISO-8859-1') {
+            utf8::decode($heading);
+            utf8::downgrade($heading);
+        }
+        elsif ($encoding eq 'UTF-8') {
+            # source is already UTF-8 encoded
+        }
+        else {
+            die "this test only supports ISO-8859-1 and UTF-8";
+        }
+
+        utf8::decode($id);
+
+        $encoding_dir = "=encoding $encoding\n\n";
+    }
 
     is $parser->encode_url($id), $link,
         "assert correct encoding of url fragment $heading_name";
@@ -72,7 +96,7 @@ for my $names (@tests) {
 EOT
         $pod =~ s/^    //gm;
 
-        my $result = MyXHTML->new->parse_to_string("$pod");
+        my $result = MyXHTML->new->parse_to_string("$encoding_dir$pod");
 
         like $result, qr{<h1 id="\Q$html_id\E">},
             "heading id generated correctly $heading_name";
@@ -92,7 +116,7 @@ EOT
 EOT
         $pod =~ s/^    //gm;
 
-        my $result = MyXHTML->new->parse_to_string("$pod");
+        my $result = MyXHTML->new->parse_to_string("$encoding_dir$pod");
         like $result, qr{<dt id="\Q$html_id\E">},
             "item id generated correctly for $heading_name";
     }
